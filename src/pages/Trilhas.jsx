@@ -29,10 +29,11 @@ export default function Trilhas() {
       let trailsQuery = supabase.from('trails').select('id, title, category, thumbnail, order_index').eq('is_published', true).order('order_index')
       if (user.target_role) trailsQuery = trailsQuery.contains('target_roles', [user.target_role])
 
-      const [{ data: trailsData }, { data: allVids }, { data: prog }] = await Promise.all([
+      const [{ data: trailsData }, { data: allVids }, { data: prog }, { data: allRatings }] = await Promise.all([
         trailsQuery,
         supabase.from('videos').select('id, trail_id, duration_min'),
         supabase.from('video_progress').select('video_id').eq('user_id', Number(user.id)),
+        supabase.from('video_ratings').select('video_id, rating'),
       ])
 
       const videoToTrail = {}
@@ -50,11 +51,22 @@ export default function Trilhas() {
         if (trailId) progressMap[trailId] = (progressMap[trailId] ?? 0) + 1
       }
 
+      // Agrupa ratings por trail
+      const trailRatings = {}
+      for (const r of allRatings ?? []) {
+        const trailId = videoToTrail[r.video_id]
+        if (!trailId) continue
+        if (!trailRatings[trailId]) trailRatings[trailId] = []
+        trailRatings[trailId].push(r.rating)
+      }
+
       const enriched = (trailsData ?? []).map(t => {
         const total = trailVideoCount[t.id] ?? 0
         const completed = progressMap[t.id] ?? 0
         const pct = total > 0 ? Math.round((completed / total) * 100) : 0
-        return { ...t, total_videos: total, completed_videos: completed, progress: pct, duration_min: trailDuration[t.id] ?? 0 }
+        const ratings = trailRatings[t.id] ?? []
+        const avg_rating = ratings.length ? Math.round(ratings.reduce((s, r) => s + r, 0) / ratings.length * 10) / 10 : null
+        return { ...t, total_videos: total, completed_videos: completed, progress: pct, duration_min: trailDuration[t.id] ?? 0, avg_rating }
       })
 
       // Desbloqueia sequencialmente: curso N só libera se o N-1 estiver 100% concluído
@@ -244,6 +256,11 @@ export default function Trilhas() {
                         {trail.duration_min > 0 && (
                           <span className="flex items-center gap-1">
                             <Clock size={12} /> {formatTime(trail.duration_min)}
+                          </span>
+                        )}
+                        {trail.avg_rating !== null && (
+                          <span className="flex items-center gap-1" style={{ color: '#FFB020' }}>
+                            <Star size={12} fill="#FFB020" /> {trail.avg_rating}
                           </span>
                         )}
                       </div>
