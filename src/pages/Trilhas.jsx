@@ -246,9 +246,6 @@ export default function Trilhas() {
                             <Clock size={12} /> {formatTime(trail.duration_min)}
                           </span>
                         )}
-                        <span className="flex items-center gap-1">
-                          <Star size={12} fill="#acabaa" /> 4.9
-                        </span>
                       </div>
                       {trail.progress === 100 && (
                         <button
