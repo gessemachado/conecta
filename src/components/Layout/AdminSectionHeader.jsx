@@ -4,10 +4,10 @@ import { LayoutDashboard, Users, BookOpen } from 'lucide-react'
 const TABS = [
   { to: '/admin',          label: 'Dashboard', icon: LayoutDashboard },
   { to: '/admin/usuarios', label: 'Usuários',  icon: Users },
-  { to: '/admin/trilhas',  label: 'Trilhas',   icon: BookOpen },
+  { to: '/admin/trilhas',  label: 'Cursos',   icon: BookOpen },
 ]
 
-export function AdminSectionHeader({ subtitle = 'Gestão e acompanhamento das trilhas' }) {
+export function AdminSectionHeader({ subtitle = 'Gestão e acompanhamento dos cursos' }) {
   const location = useLocation()
 
   function isActive(path) {

@@ -86,7 +86,7 @@ export default function Trilhas() {
         {/* ── Header ── */}
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-white">Todas as Trilhas</h1>
+            <h1 className="text-3xl font-bold text-white">Todos os Cursos</h1>
             <p className="text-sm mt-1" style={{ color: '#A0A0A0' }}>
               Explore o catálogo completo de treinamentos e acelere seu crescimento profissional na BuyHelp.
             </p>
@@ -95,7 +95,7 @@ export default function Trilhas() {
             <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: '#5A5A5A' }} />
             <input
               type="text"
-              placeholder="Buscar trilha ou módulo..."
+              placeholder="Buscar curso ou módulo..."
               value={search}
               onChange={e => setSearch(e.target.value)}
               className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm text-white placeholder-[#5A5A5A] focus:outline-none"
@@ -110,7 +110,7 @@ export default function Trilhas() {
         <div className="space-y-3">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: '#5A5A5A' }}>
-              Filtrar por categoria
+              Filtrar por trilha
             </p>
             <div className="flex flex-wrap gap-2">
               {allCategories.map(c => (
@@ -276,18 +276,18 @@ export default function Trilhas() {
                   onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)' }}
                   onMouseLeave={e => { e.currentTarget.style.color = '#A0A0A0'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)' }}
                 >
-                  Carregar mais trilhas
+                  Carregar mais cursos
                   <ChevronDown size={14} />
                 </button>
                 <p className="text-xs" style={{ color: '#5A5A5A' }}>
-                  Mostrando {visible.length} de {filtered.length} trilhas disponíveis
+                  Mostrando {visible.length} de {filtered.length} cursos disponíveis
                 </p>
               </div>
             )}
 
             {filtered.length === 0 && (
               <div className="text-center py-16 text-sm" style={{ color: '#5A5A5A' }}>
-                Nenhuma trilha encontrada para os filtros selecionados.
+                Nenhum curso encontrado para os filtros selecionados.
               </div>
             )}
           </>

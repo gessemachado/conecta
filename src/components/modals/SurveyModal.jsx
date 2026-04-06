@@ -6,7 +6,7 @@ const STEPS = [
   {
     id: 'training',
     title: 'Avaliação do treinamento',
-    subtitle: 'Como você avalia o conteúdo desta trilha?',
+    subtitle: 'Como você avalia o conteúdo deste curso?',
     type: 'scale_10',
   },
   {

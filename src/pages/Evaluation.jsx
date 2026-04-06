@@ -142,7 +142,7 @@ export default function Evaluation() {
               </p>
               <div className="flex gap-3 justify-center">
                 <Button variant="secondary" onClick={() => navigate(`/trilha/${eval_.trail_id}`)}>
-                  Voltar à trilha
+                  Voltar ao curso
                 </Button>
                 <Button onClick={() => navigate(`/certificado/cert-${id}`)}>
                   <Award size={15} />
@@ -157,7 +157,7 @@ export default function Evaluation() {
               </p>
               <div className="flex gap-3 justify-center">
                 <Button variant="secondary" onClick={() => navigate(`/trilha/${eval_.trail_id}`)}>
-                  Revisar trilha
+                  Revisar curso
                 </Button>
                 <Button onClick={() => { setSubmitted(false); setCurrent(0); setAnswers({}) }}>
                   Tentar novamente
@@ -180,7 +180,7 @@ export default function Evaluation() {
             className="flex items-center gap-1.5 text-sm text-text-secondary hover:text-white transition-colors mb-4"
           >
             <ChevronLeft size={16} />
-            Voltar à trilha
+            Voltar ao curso
           </button>
           <h1 className="text-xl font-bold text-white">{eval_.title}</h1>
           <p className="text-text-secondary text-sm mt-1">Nota mínima: {eval_.pass_score}%</p>

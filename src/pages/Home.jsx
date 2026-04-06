@@ -175,7 +175,7 @@ export default function Home() {
                   <div className="flex justify-between items-center">
                     <div>
                       <span className="text-xs font-bold tracking-widest uppercase block mb-1" style={{ color: '#FF6600' }}>
-                        TRILHA ATUAL
+                        CURSO ATUAL
                       </span>
                       <h3 className="text-xl font-bold text-white leading-tight">{currentTrail.title}</h3>
                     </div>
@@ -236,7 +236,7 @@ export default function Home() {
                 <CheckCircle2 size={20} style={{ color: '#22C55E' }} />
               </div>
               <div>
-                <p className="text-xs" style={{ color: '#acabaa' }}>Trilhas Finais</p>
+                <p className="text-xs" style={{ color: '#acabaa' }}>Cursos Finais</p>
                 <h4 className="text-xl font-bold text-white">{stats.completedTrails}</h4>
               </div>
             </div>
@@ -253,7 +253,7 @@ export default function Home() {
                     <CheckCircle2 size={18} style={{ color: '#22C55E' }} />
                   </div>
                   <div>
-                    <p className="text-[10px] leading-none mb-1" style={{ color: '#acabaa' }}>Trilhas Concluídas</p>
+                    <p className="text-[10px] leading-none mb-1" style={{ color: '#acabaa' }}>Cursos Concluídos</p>
                     <h4 className="text-xl font-bold text-white">{stats.completedTrails}</h4>
                   </div>
                 </div>
@@ -262,7 +262,7 @@ export default function Home() {
                     <Bookmark size={18} style={{ color: '#FF6600' }} />
                   </div>
                   <div>
-                    <p className="text-[10px] leading-none mb-1" style={{ color: '#acabaa' }}>Trilhas Restantes</p>
+                    <p className="text-[10px] leading-none mb-1" style={{ color: '#acabaa' }}>Cursos Restantes</p>
                     <h4 className="text-xl font-bold text-white">{stats.remainingTrails}</h4>
                   </div>
                 </div>
@@ -275,7 +275,7 @@ export default function Home() {
             <section className="space-y-6">
               <div className="flex justify-between items-end">
                 <div>
-                  <h2 className="text-2xl font-bold text-white tracking-tight">Trilhas Recomendadas</h2>
+                  <h2 className="text-2xl font-bold text-white tracking-tight">Cursos Recomendados</h2>
                   <p className="text-sm" style={{ color: '#acabaa' }}>Baseado no seu perfil de crescimento</p>
                 </div>
                 <button

@@ -6,7 +6,7 @@ import { Avatar } from '../ui/Avatar'
 
 const COLABORADOR_NAV = [
   { label: 'Home', to: '/' },
-  { label: 'Trilhas', to: '/trilhas' },
+  { label: 'Cursos', to: '/trilhas' },
   { label: 'Certificados', to: '/certificados' },
 ]
 
@@ -60,7 +60,7 @@ export function Header() {
                 className="px-3 py-1.5 rounded-btn text-xs font-semibold transition-all"
                 style={location.pathname.startsWith('/admin/trilhas') ? { color: '#FF6600' } : { color: '#A0A0A0' }}
               >
-                Trilhas
+                Cursos
               </Link>
             </>
           ) : (
