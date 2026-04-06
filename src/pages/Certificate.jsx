@@ -73,7 +73,7 @@ export default function Certificate() {
     if (navigator.share) {
       navigator.share({
         title: 'Meu Certificado — BuyHelp Conecta',
-        text: `Concluí a trilha "${trail?.title}" pela BuyHelp Conecta!`,
+        text: `Concluí o curso "${trail?.title}" pela BuyHelp Conecta!`,
       })
     } else {
       navigator.clipboard.writeText(cert?.verification_code ?? '')
@@ -173,7 +173,7 @@ export default function Certificate() {
             <p className="text-sm leading-relaxed mx-auto max-w-xs" style={{ color: '#555' }}>
               concluiu com êxito o programa de treinamento{' '}
               <span className="font-bold" style={{ color: '#111' }}>BuyHelp Conecta</span>,{' '}
-              demonstrando dedicação e comprometimento no desenvolvimento de suas habilidades profissionais na trilha{' '}
+              demonstrando dedicação e comprometimento no desenvolvimento de suas habilidades profissionais no curso{' '}
               <span className="font-bold" style={{ color: '#FF6600' }}>{trail.title}</span>.
             </p>
 

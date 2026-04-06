@@ -24,7 +24,7 @@ export function ColaboradorSectionHeader({ subtitle = 'Sua jornada de aprendizag
             }}
           >
             <BookOpen size={15} />
-            Trilhas
+            Cursos
           </span>
         </div>
       </div>

@@ -44,7 +44,7 @@ export default function AdminTrails() {
   })
 
   async function handleDelete(id) {
-    if (confirm('Remover esta trilha?')) {
+    if (confirm('Remover este curso?')) {
       await supabase.from('trails').delete().eq('id', id)
       setTrails((ts) => ts.filter((t) => t.id !== id))
     }
@@ -52,7 +52,7 @@ export default function AdminTrails() {
 
   return (
     <AppLayout>
-      <AdminSectionHeader subtitle="Gestão de trilhas de aprendizado" />
+      <AdminSectionHeader subtitle="Gestão de cursos de aprendizado" />
 
       <div className="max-w-6xl mx-auto px-6 py-7 space-y-6">
 
@@ -74,7 +74,7 @@ export default function AdminTrails() {
             </div>
             <div>
               <p className="text-sm font-semibold text-white leading-tight">Filtros</p>
-              <p className="text-xs" style={{ color: '#A0A0A0' }}>Pesquise e filtre as trilhas</p>
+              <p className="text-xs" style={{ color: '#A0A0A0' }}>Pesquise e filtre os cursos</p>
             </div>
           </div>
 
@@ -83,7 +83,7 @@ export default function AdminTrails() {
               <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: '#5A5A5A' }} />
               <input
                 type="text"
-                placeholder="Buscar por nome da trilha..."
+                placeholder="Buscar por nome do curso..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 className="w-full pl-9 pr-4 py-2.5 rounded-lg text-sm text-white placeholder-[#5A5A5A] focus:outline-none transition-colors"
@@ -99,7 +99,7 @@ export default function AdminTrails() {
               className="px-4 py-2.5 rounded-lg text-sm text-white focus:outline-none cursor-pointer"
               style={{ background: '#0d0d0d', border: '1px solid rgba(255,255,255,0.08)' }}
             >
-              {allCategories.map(c => <option key={c} value={c}>{c === 'Todas' ? 'Categoria' : c}</option>)}
+              {allCategories.map(c => <option key={c} value={c}>{c === 'Todas' ? 'Trilha' : c}</option>)}
             </select>
 
             <button
@@ -248,7 +248,7 @@ export default function AdminTrails() {
             >
               <Plus size={20} style={{ color: '#5A5A5A' }} />
             </div>
-            <p className="text-sm font-medium" style={{ color: '#A0A0A0' }}>Criar nova trilha</p>
+            <p className="text-sm font-medium" style={{ color: '#A0A0A0' }}>Criar novo curso</p>
             <button
               className="flex items-center gap-2 px-4 py-2 rounded-btn text-sm font-semibold"
               style={{ background: '#FF6600', color: '#fff' }}

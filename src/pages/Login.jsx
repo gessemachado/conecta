@@ -4,58 +4,30 @@ import { Mail, Lock, ShieldCheck, Loader2 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { AUTH_FUNCTION_URL, SUPABASE_ANON_KEY_EXPORT } from '../lib/supabase'
 
-const BG_ICONS = [
-  { top: '8%',  left: '3%',  size: 32, rotate: -20, color: '#00897B' },
-  { top: '18%', left: '12%', size: 24, rotate: 15,  color: '#00897B' },
-  { top: '35%', left: '5%',  size: 28, rotate: -10, color: '#FF6600', opacity: 0.15 },
-  { top: '55%', left: '2%',  size: 22, rotate: 20,  color: '#00897B' },
-  { top: '72%', left: '8%',  size: 30, rotate: -25, color: '#00897B' },
-  { top: '85%', left: '15%', size: 20, rotate: 10,  color: '#00897B' },
-  { top: '5%',  left: '78%', size: 26, rotate: 30,  color: '#00897B' },
-  { top: '20%', left: '88%', size: 20, rotate: -15, color: '#00897B' },
-  { top: '40%', left: '92%', size: 32, rotate: 10,  color: '#00897B' },
-  { top: '60%', left: '85%', size: 24, rotate: -30, color: '#00897B' },
-  { top: '75%', left: '90%', size: 28, rotate: 20,  color: '#FF6600', opacity: 0.15 },
-  { top: '90%', left: '80%', size: 22, rotate: -10, color: '#00897B' },
-  { top: '12%', left: '30%', size: 18, rotate: 25,  color: '#00897B' },
-  { top: '88%', left: '45%', size: 20, rotate: -20, color: '#00897B' },
-  { top: '92%', left: '62%', size: 16, rotate: 15,  color: '#00897B' },
+// Decorative background symbols
+const BG_SYMBOLS = [
+  { char: '◇', x: '4%',  y: '18%', size: 28, rot: 15,  opacity: 0.18 },
+  { char: '◇', x: '8%',  y: '60%', size: 20, rot: -10, opacity: 0.12 },
+  { char: 'D', x: '2%',  y: '38%', size: 44, rot: 0,   opacity: 0.08 },
+  { char: 'D', x: '88%', y: '22%', size: 48, rot: 5,   opacity: 0.10 },
+  { char: '◇', x: '92%', y: '55%', size: 22, rot: 20,  opacity: 0.14 },
+  { char: '◇', x: '85%', y: '75%', size: 18, rot: -15, opacity: 0.12 },
+  { char: 'D', x: '14%', y: '80%', size: 36, rot: -5,  opacity: 0.09 },
+  { char: '◇', x: '78%', y: '10%', size: 16, rot: 30,  opacity: 0.16 },
+  { char: '✦', x: '55%', y: '5%',  size: 14, rot: 0,   opacity: 0.10 },
+  { char: '✦', x: '20%', y: '92%', size: 12, rot: 0,   opacity: 0.10 },
+  { char: '◇', x: '65%', y: '88%', size: 20, rot: 10,  opacity: 0.13 },
 ]
 
-function BuyHelpBagIcon({ size = 32, color = '#FF6600', rotate = 0, opacity = 0.25 }) {
+function BuyHelpLogo() {
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 40 40"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      style={{ transform: `rotate(${rotate}deg)`, opacity }}
-    >
-      <path
-        d="M8 12h24l-3 20H11L8 12z"
-        fill={color}
-        fillOpacity="0.6"
-      />
-      <path
-        d="M15 12c0-2.76 2.24-5 5-5s5 2.24 5 5"
-        stroke={color}
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        fill="none"
-        opacity="0.8"
-      />
-      <text
-        x="20"
-        y="27"
-        textAnchor="middle"
-        fontSize="11"
-        fontWeight="bold"
-        fill="white"
-        fontFamily="Arial, sans-serif"
-      >
-        B
-      </text>
+    <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* Bag body */}
+      <rect x="8" y="22" width="48" height="36" rx="6" fill="#FF6600"/>
+      {/* Bag handle */}
+      <path d="M22 22 C22 14 42 14 42 22" stroke="#FF6600" strokeWidth="5" fill="none" strokeLinecap="round"/>
+      {/* B letter */}
+      <text x="32" y="47" textAnchor="middle" fontSize="22" fontWeight="bold" fill="white" fontFamily="Arial, sans-serif">B</text>
     </svg>
   )
 }
@@ -73,7 +45,6 @@ export default function Login() {
     e.preventDefault()
     setError('')
     setLoading(true)
-
     try {
       const res = await fetch(AUTH_FUNCTION_URL, {
         method: 'POST',
@@ -105,180 +76,127 @@ export default function Login() {
   }
 
   return (
-    <div
-      className="min-h-screen flex flex-col items-center justify-between py-10 px-4 relative overflow-hidden"
-      style={{ background: '#0A0A0A' }}
-    >
-      {/* Background scattered icons */}
-      {BG_ICONS.map((icon, i) => (
-        <div
+    <div className="min-h-screen flex flex-col items-center justify-between py-10 px-4 relative overflow-hidden" style={{ background: '#0e0e0e' }}>
+
+      {/* Background decorative symbols */}
+      {BG_SYMBOLS.map((s, i) => (
+        <span
           key={i}
-          className="absolute pointer-events-none select-none"
-          style={{ top: icon.top, left: icon.left }}
+          className="absolute select-none pointer-events-none"
+          style={{
+            left: s.x,
+            top: s.y,
+            fontSize: s.size,
+            opacity: s.opacity,
+            color: '#FF6600',
+            transform: `rotate(${s.rot}deg)`,
+            fontWeight: 'bold',
+            fontFamily: 'serif',
+          }}
         >
-          <BuyHelpBagIcon
-            size={icon.size}
-            color={icon.color}
-            rotate={icon.rotate}
-            opacity={icon.opacity ?? 0.25}
-          />
-        </div>
+          {s.char}
+        </span>
       ))}
 
-      {/* Orange glow behind logo */}
-      <div
-        className="absolute pointer-events-none"
-        style={{
-          top: '0%',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          width: 400,
-          height: 300,
-          background: 'radial-gradient(ellipse at center, rgba(255,102,0,0.18) 0%, transparent 70%)',
-        }}
-      />
-
-      {/* Logo */}
-      <div className="relative flex flex-col items-center gap-2 mt-6">
+      {/* Top: Logo */}
+      <div className="flex flex-col items-center gap-3 mt-6">
         <div className="flex items-center gap-3">
-          <svg width="56" height="56" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect width="56" height="56" rx="14" fill="#FF6600" />
-            <path
-              d="M18 22h20l-2.5 18H20.5L18 22z"
-              fill="rgba(0,0,0,0.35)"
-            />
-            <path
-              d="M22 22c0-3.31 2.69-6 6-6s6 2.69 6 6"
-              stroke="white"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              fill="none"
-            />
-            <text
-              x="28"
-              y="37"
-              textAnchor="middle"
-              fontSize="13"
-              fontWeight="bold"
-              fill="white"
-              fontFamily="Arial, sans-serif"
-            >
-              B
-            </text>
-          </svg>
-          <span className="text-4xl font-bold text-white">BuyHelp</span>
+          <BuyHelpLogo />
+          <span className="text-4xl font-extrabold text-white tracking-tight">BuyHelp</span>
         </div>
-        <p className="text-sm" style={{ color: '#9CA3AF' }}>Plataforma de Gestão BuyHelp</p>
+        <p className="text-sm" style={{ color: '#888' }}>Plataforma de Gestão BuyHelp</p>
       </div>
 
       {/* Card */}
       <div
-        className="relative w-full max-w-md rounded-2xl p-8"
-        style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}
+        className="w-full max-w-sm rounded-2xl p-7 space-y-5"
+        style={{ background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.07)' }}
       >
-        {/* Card title */}
-        <div className="flex items-center gap-2 mb-6">
-          <ShieldCheck size={20} color="#FF6600" />
-          <h2 className="text-lg font-semibold text-white">Acesso Seguro</h2>
+        {/* Card header */}
+        <div className="flex items-center gap-2">
+          <ShieldCheck size={20} style={{ color: '#FF6600' }} />
+          <h2 className="text-lg font-bold text-white">Acesso Seguro</h2>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* E-mail */}
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-white">E-mail</label>
+            <label className="text-sm font-semibold text-white">E-mail</label>
             <div className="relative">
-              <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#6B7280' }} />
+              <Mail size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: '#888' }} />
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={e => setEmail(e.target.value)}
                 placeholder="seu@email.com"
                 required
-                className="w-full pl-10 pr-4 py-3 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 transition-all"
-                style={{
-                  background: '#111111',
-                  border: '1px solid #2a2a2a',
-                  focusRingColor: '#FF6600',
-                }}
+                className="w-full pl-10 pr-4 py-3 rounded-xl text-sm text-white placeholder-[#666] outline-none transition-all"
+                style={{ background: '#2a2a2a', border: '1px solid rgba(255,255,255,0.08)' }}
                 onFocus={e => e.target.style.borderColor = '#FF6600'}
-                onBlur={e => e.target.style.borderColor = '#2a2a2a'}
+                onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.08)'}
               />
             </div>
           </div>
 
           {/* Senha */}
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-white">Senha</label>
+            <label className="text-sm font-semibold text-white">Senha</label>
             <div className="relative">
-              <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#6B7280' }} />
+              <Lock size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: '#888' }} />
               <input
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={e => setPassword(e.target.value)}
                 placeholder="••••••••"
                 required
-                className="w-full pl-10 pr-4 py-3 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none transition-all"
-                style={{ background: '#111111', border: '1px solid #2a2a2a' }}
+                className="w-full pl-10 pr-4 py-3 rounded-xl text-sm text-white placeholder-[#666] outline-none transition-all"
+                style={{ background: '#2a2a2a', border: '1px solid rgba(255,255,255,0.08)' }}
                 onFocus={e => e.target.style.borderColor = '#FF6600'}
-                onBlur={e => e.target.style.borderColor = '#2a2a2a'}
+                onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.08)'}
               />
             </div>
           </div>
 
-          {/* Lembrar + Esqueceu */}
+          {/* Lembrar-me + Esqueceu */}
           <div className="flex items-center justify-between">
-            <label className="flex items-center gap-2 text-sm cursor-pointer" style={{ color: '#9CA3AF' }}>
+            <label className="flex items-center gap-2 cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={remember}
-                onChange={(e) => setRemember(e.target.checked)}
-                className="w-4 h-4 rounded"
-                style={{ accentColor: '#FF6600' }}
+                onChange={e => setRemember(e.target.checked)}
+                className="w-4 h-4 rounded accent-[#FF6600] cursor-pointer"
               />
-              Lembrar-me
+              <span className="text-sm" style={{ color: '#A0A0A0' }}>Lembrar-me</span>
             </label>
-            <button type="button" className="text-sm font-medium hover:opacity-80 transition-opacity" style={{ color: '#FF6600' }}>
+            <button type="button" className="text-sm font-semibold transition-opacity hover:opacity-70" style={{ color: '#FF6600' }}>
               Esqueceu a senha?
             </button>
           </div>
 
           {error && (
-            <div className="rounded-lg px-4 py-3 text-sm text-red-400" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)' }}>
+            <div className="rounded-xl px-4 py-3 text-sm text-red-400" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)' }}>
               {error}
             </div>
           )}
 
+          {/* Submit */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex items-center justify-center gap-2 text-white font-semibold py-3 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-white font-bold text-sm transition-all disabled:opacity-50"
             style={{ background: '#FF6600' }}
-            onMouseEnter={e => { if (!loading) e.target.style.background = '#e55a00' }}
-            onMouseLeave={e => { if (!loading) e.target.style.background = '#FF6600' }}
+            onMouseEnter={e => { if (!loading) e.currentTarget.style.background = '#E55C00' }}
+            onMouseLeave={e => e.currentTarget.style.background = '#FF6600'}
           >
-            {loading ? <Loader2 size={16} className="animate-spin" /> : null}
+            {loading && <Loader2 size={15} className="animate-spin" />}
             {loading ? 'Entrando...' : 'Entrar'}
           </button>
         </form>
 
-        {/* Dev shortcuts */}
-        {import.meta.env.DEV && (
-          <div className="mt-4 pt-4 space-y-2" style={{ borderTop: '1px solid #2a2a2a' }}>
-            <p className="text-xs text-center" style={{ color: '#6B7280' }}>Dev: entrar como</p>
-            <div className="flex gap-2">
-              <button onClick={() => devLogin('user')} className="flex-1 text-xs py-2 rounded-lg transition-colors" style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.6)' }}>
-                Colaborador
-              </button>
-              <button onClick={() => devLogin('admin')} className="flex-1 text-xs py-2 rounded-lg transition-colors" style={{ background: 'rgba(255,102,0,0.1)', color: '#FF6600' }}>
-                Admin
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Footer */}
-      <p className="relative text-xs" style={{ color: '#6B7280' }}>
+      <p className="text-xs" style={{ color: '#555' }}>
         © {new Date().getFullYear()} BuyHelp. Todos os direitos reservados.
       </p>
     </div>

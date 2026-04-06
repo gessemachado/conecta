@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
-  ChevronLeft, Check, Play, Pause, Volume2, Maximize,
+  ChevronLeft, ChevronDown, ChevronRight, Check, Play, Pause, Volume2, Maximize,
   Settings, Lock, CheckCircle, ThumbsUp, Award, Loader2,
 } from 'lucide-react'
 import { AppLayout } from '../components/Layout/AppLayout'
@@ -53,9 +53,11 @@ export default function VideoPlayer() {
 
   const [video, setVideo] = useState(null)
   const [trail, setTrail] = useState(null)
-  const [trailVideos, setTrailVideos] = useState([])
+  const [sections, setSections] = useState([])
+  const [completedIds, setCompletedIds] = useState(new Set())
   const [loading, setLoading] = useState(true)
   const [completed, setCompleted] = useState(false)
+  const [collapsedSections, setCollapsedSections] = useState({})
   const [comment, setComment] = useState('')
   const [comments, setComments] = useState([])
   const [playing, setPlaying] = useState(false)
@@ -82,23 +84,39 @@ export default function VideoPlayer() {
         .single()
       setTrail(tr)
 
-      // Fetch all videos of this trail
-      const { data: vids } = await supabase
-        .from('videos')
-        .select('id, title, duration_min, order_index')
+      // Fetch sections with videos
+      const { data: secs } = await supabase
+        .from('sections')
+        .select('id, title, order_index, videos(id, title, duration_min, order_index)')
         .eq('trail_id', vid.trail_id)
         .order('order_index')
-      setTrailVideos(vids || [])
 
-      // Check if current video is already completed
+      if (secs && secs.length > 0) {
+        setSections(secs.map(s => ({
+          ...s,
+          videos: (s.videos || []).sort((a, b) => a.order_index - b.order_index),
+        })))
+      } else {
+        // Legacy: flat list
+        const { data: vids } = await supabase
+          .from('videos')
+          .select('id, title, duration_min, order_index')
+          .eq('trail_id', vid.trail_id)
+          .order('order_index')
+        if (vids?.length) setSections([{ id: 'legacy', title: null, videos: vids }])
+      }
+
+      // Check completed videos
       if (user?.id) {
         const { data: prog } = await supabase
           .from('video_progress')
-          .select('id')
+          .select('video_id')
           .eq('user_id', Number(user.id))
-          .eq('video_id', Number(id))
-          .maybeSingle()
-        if (prog) setCompleted(true)
+        if (prog) {
+          const ids = new Set(prog.map(p => p.video_id))
+          setCompletedIds(ids)
+          if (ids.has(Number(id))) setCompleted(true)
+        }
       }
       setLoading(false)
     }
@@ -107,6 +125,10 @@ export default function VideoPlayer() {
 
   const lvl = LEVEL_STYLE[video?.level] || LEVEL_STYLE['INICIANTE']
   const initials = user?.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'U'
+
+  function toggleSection(secId) {
+    setCollapsedSections(s => ({ ...s, [secId]: !s[secId] }))
+  }
 
   if (loading) {
     return (
@@ -354,47 +376,90 @@ export default function VideoPlayer() {
           <div className="hidden lg:block w-72 flex-shrink-0">
             <div
               className="sticky top-[88px] rounded-xl overflow-hidden"
-              style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.08)' }}
+              style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.08)', maxHeight: 'calc(100vh - 120px)', overflowY: 'auto' }}
             >
               <div className="px-4 py-3 border-b" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-                <p className="text-sm font-semibold text-white">Conteúdo da Trilha</p>
+                <p className="text-sm font-semibold text-white">Conteúdo do Curso</p>
               </div>
 
               <div>
-                {trailVideos.map(v => {
-                  const isCurrent = String(v.id) === String(id)
+                {sections.map((sec, si) => {
+                  const isLegacy = sec.id === 'legacy'
+                  const isCollapsed = collapsedSections[sec.id]
+                  const secHasCurrent = sec.videos.some(v => String(v.id) === String(id))
+
                   return (
-                    <button
-                      key={v.id}
-                      onClick={() => navigate(`/video/${v.id}`)}
-                      className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors"
-                      style={{
-                        background: isCurrent ? 'rgba(255,102,0,0.08)' : 'transparent',
-                        borderBottom: '1px solid rgba(255,255,255,0.04)',
-                      }}
-                      onMouseEnter={e => e.currentTarget.style.background = isCurrent ? 'rgba(255,102,0,0.12)' : 'rgba(255,255,255,0.03)'}
-                      onMouseLeave={e => e.currentTarget.style.background = isCurrent ? 'rgba(255,102,0,0.08)' : 'transparent'}
-                    >
-                      <StatusIcon status={isCurrent ? 'current' : 'unlocked'} />
-                      <div className="flex-1 min-w-0">
-                        <p
-                          className="text-xs leading-snug truncate"
-                          style={{ color: isCurrent ? '#FF6600' : '#E0E0E0', fontWeight: isCurrent ? 600 : 400 }}
+                    <div key={sec.id}>
+                      {/* Section header — only show if has title */}
+                      {!isLegacy && (
+                        <button
+                          onClick={() => toggleSection(sec.id)}
+                          className="w-full flex items-center gap-2 px-3 py-2.5 text-left transition-colors"
+                          style={{
+                            background: secHasCurrent ? 'rgba(255,102,0,0.05)' : '#0D0D0D',
+                            borderBottom: '1px solid rgba(255,255,255,0.05)',
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
+                          onMouseLeave={e => e.currentTarget.style.background = secHasCurrent ? 'rgba(255,102,0,0.05)' : '#0D0D0D'}
                         >
-                          {v.title}
-                        </p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          {isCurrent && (
-                            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ background: '#FF660022', color: '#FF6600' }}>
-                              Assistindo
-                            </span>
-                          )}
-                          {v.duration_min > 0 && (
-                            <span className="text-[10px] text-text-secondary">{v.duration_min} min</span>
-                          )}
-                        </div>
-                      </div>
-                    </button>
+                          {isCollapsed
+                            ? <ChevronRight size={13} style={{ color: '#5A5A5A', flexShrink: 0 }} />
+                            : <ChevronDown size={13} style={{ color: '#5A5A5A', flexShrink: 0 }} />
+                          }
+                          <span className="flex-1 text-[11px] font-semibold leading-tight truncate" style={{ color: '#A0A0A0' }}>
+                            Seção {si + 1}: {sec.title}
+                          </span>
+                          <span className="text-[10px] flex-shrink-0" style={{ color: '#5A5A5A' }}>
+                            {sec.videos.length} aulas
+                          </span>
+                        </button>
+                      )}
+
+                      {/* Videos */}
+                      {!isCollapsed && sec.videos.map(v => {
+                        const isCurrent = String(v.id) === String(id)
+                        const isDone = completedIds.has(v.id)
+                        return (
+                          <button
+                            key={v.id}
+                            onClick={() => navigate(`/video/${v.id}`)}
+                            className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors"
+                            style={{
+                              background: isCurrent ? 'rgba(255,102,0,0.08)' : 'transparent',
+                              borderBottom: '1px solid rgba(255,255,255,0.04)',
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = isCurrent ? 'rgba(255,102,0,0.12)' : 'rgba(255,255,255,0.03)'}
+                            onMouseLeave={e => e.currentTarget.style.background = isCurrent ? 'rgba(255,102,0,0.08)' : 'transparent'}
+                          >
+                            {isDone && !isCurrent ? (
+                              <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: '#22C55E22' }}>
+                                <CheckCircle size={12} style={{ color: '#22C55E' }} />
+                              </div>
+                            ) : (
+                              <StatusIcon status={isCurrent ? 'current' : 'unlocked'} />
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p
+                                className="text-xs leading-snug truncate"
+                                style={{ color: isCurrent ? '#FF6600' : '#E0E0E0', fontWeight: isCurrent ? 600 : 400 }}
+                              >
+                                {v.title}
+                              </p>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                {isCurrent && (
+                                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ background: '#FF660022', color: '#FF6600' }}>
+                                    Assistindo
+                                  </span>
+                                )}
+                                {v.duration_min > 0 && (
+                                  <span className="text-[10px] text-text-secondary">{v.duration_min} min</span>
+                                )}
+                              </div>
+                            </div>
+                          </button>
+                        )
+                      })}
+                    </div>
                   )
                 })}
               </div>

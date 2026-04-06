@@ -97,7 +97,7 @@ export default function AdminDashboard() {
 
   return (
     <AppLayout>
-      <AdminSectionHeader subtitle="Gestão e acompanhamento das trilhas" />
+      <AdminSectionHeader subtitle="Gestão e acompanhamento dos cursos" />
 
       <div className="max-w-6xl mx-auto px-6 py-7 space-y-6">
 
