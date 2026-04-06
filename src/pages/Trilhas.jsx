@@ -26,8 +26,11 @@ export default function Trilhas() {
   useEffect(() => {
     if (!user?.id) return
     async function load() {
+      let trailsQuery = supabase.from('trails').select('id, title, category, thumbnail, order_index').eq('is_published', true).order('order_index')
+      if (user.target_role) trailsQuery = trailsQuery.contains('target_roles', [user.target_role])
+
       const [{ data: trailsData }, { data: allVids }, { data: prog }] = await Promise.all([
-        supabase.from('trails').select('id, title, category, thumbnail, order_index').eq('is_published', true).order('order_index'),
+        trailsQuery,
         supabase.from('videos').select('id, trail_id, duration_min'),
         supabase.from('video_progress').select('video_id').eq('user_id', Number(user.id)),
       ])
