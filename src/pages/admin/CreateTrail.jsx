@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
-import { Plus, Trash2, GripVertical, ImageIcon, X, ChevronRight, ChevronDown, Video, Clock, FileVideo, ArrowRight, Loader2 } from 'lucide-react'
+import { Plus, Trash2, GripVertical, ImageIcon, X, ChevronRight, ChevronDown, Video, Clock, FileVideo, ArrowRight, Loader2, Pencil } from 'lucide-react'
 import { AppLayout } from '../../components/Layout/AppLayout'
 import { supabase } from '../../lib/supabase'
 
-const CATEGORIES = ['Vendas', 'Atendimento', 'Produto', 'Gestão', 'Compliance', 'Operações']
+const DEFAULT_CATEGORIES = ['Vendas', 'Atendimento', 'Produto', 'Gestão', 'Compliance', 'Operações']
 const LEVELS = ['INICIANTE', 'INTERMEDIÁRIO', 'AVANÇADO']
 
 const LEVEL_STYLE = {
@@ -305,8 +305,7 @@ export default function CreateTrail() {
     description: '',
     category: 'Vendas',
     order: '',
-    targetColaborador: true,
-    targetAdmin: false,
+    targetRoles: ['gerente-credenciado'],
   })
   const [sections, setSections] = useState([])
   const [thumbnail, setThumbnail] = useState(null)
@@ -316,6 +315,45 @@ export default function CreateTrail() {
   const [saving, setSaving] = useState(false)
   const [loadingEdit, setLoadingEdit] = useState(isEdit)
   const [error, setError] = useState('')
+  const [categories, setCategories] = useState(DEFAULT_CATEGORIES)
+  const [categoryModal, setCategoryModal] = useState(null) // null | { mode: 'add' } | { mode: 'edit', value: string }
+  const [categoryInput, setCategoryInput] = useState('')
+
+  // Carrega categorias existentes dos cursos no banco
+  useEffect(() => {
+    async function loadCategories() {
+      const { data } = await supabase.from('trails').select('category').not('category', 'is', null)
+      if (data?.length) {
+        const fromDb = [...new Set(data.map(t => t.category).filter(Boolean))]
+        setCategories(prev => [...new Set([...prev, ...fromDb])])
+      }
+    }
+    loadCategories()
+  }, [])
+
+  function openAddCategory() {
+    setCategoryInput('')
+    setCategoryModal({ mode: 'add' })
+  }
+
+  function openEditCategory(cat) {
+    setCategoryInput(cat)
+    setCategoryModal({ mode: 'edit', value: cat })
+  }
+
+  function confirmCategoryModal() {
+    const val = categoryInput.trim()
+    if (!val) return
+    if (categoryModal.mode === 'add') {
+      setCategories(prev => [...new Set([...prev, val])])
+      setForm(f => ({ ...f, category: val }))
+    } else {
+      const old = categoryModal.value
+      setCategories(prev => prev.map(c => c === old ? val : c))
+      if (form.category === old) setForm(f => ({ ...f, category: val }))
+    }
+    setCategoryModal(null)
+  }
 
   useEffect(() => {
     if (!isEdit) return
@@ -327,8 +365,7 @@ export default function CreateTrail() {
           description: trail.description || '',
           category: trail.category || 'Vendas',
           order: trail.order_index?.toString() || '',
-          targetColaborador: trail.target_roles?.includes('employee') ?? true,
-          targetAdmin: trail.target_roles?.includes('admin') ?? false,
+          targetRoles: trail.target_roles ?? ['gerente-credenciado'],
         })
         if (trail.thumbnail) setThumbnail(trail.thumbnail)
       }
@@ -452,10 +489,7 @@ export default function CreateTrail() {
       }
 
       // 2. Upsert trail
-      const targetRoles = [
-        ...(form.targetColaborador ? ['employee'] : []),
-        ...(form.targetAdmin ? ['admin'] : []),
-      ]
+      const targetRoles = form.targetRoles
       const trailPayload = {
         title: form.title.trim(),
         description: form.description.trim() || null,
@@ -588,16 +622,42 @@ export default function CreateTrail() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#5A5A5A' }}>Trilha *</label>
-                    <select
-                      value={form.category}
-                      onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
-                      className="w-full px-3 py-2.5 rounded-btn text-sm text-white outline-none"
-                      style={{ background: '#0A0A0A', border: '1px solid rgba(255,255,255,0.1)' }}
-                    >
-                      {CATEGORIES.map(c => <option key={c}>{c}</option>)}
-                    </select>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#5A5A5A' }}>Trilha *</label>
+                      <button
+                        type="button"
+                        onClick={openAddCategory}
+                        className="flex items-center gap-1 text-xs font-semibold transition-colors"
+                        style={{ color: '#FF6600' }}
+                      >
+                        <Plus size={12} /> Nova
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {categories.map(c => (
+                        <div
+                          key={c}
+                          className="flex items-center gap-1 rounded-full text-xs font-semibold transition-all"
+                          style={
+                            form.category === c
+                              ? { background: '#FF6600', color: '#fff', padding: '4px 10px 4px 12px' }
+                              : { background: 'rgba(255,255,255,0.06)', color: '#A0A0A0', border: '1px solid rgba(255,255,255,0.1)', padding: '4px 10px 4px 12px' }
+                          }
+                        >
+                          <button type="button" onClick={() => setForm(f => ({ ...f, category: c }))}>
+                            {c}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openEditCategory(c)}
+                            className="ml-1 opacity-60 hover:opacity-100 transition-opacity"
+                          >
+                            <Pencil size={10} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#5A5A5A' }}>Ordem de Exibição</label>
@@ -615,27 +675,36 @@ export default function CreateTrail() {
 
                 <div className="space-y-2">
                   <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#5A5A5A' }}>Público-Alvo</label>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setForm(f => ({ ...f, targetColaborador: !f.targetColaborador }))}
-                      className="px-4 py-1.5 rounded-full text-sm font-semibold transition-all"
-                      style={form.targetColaborador
-                        ? { background: '#FF6600', color: '#fff' }
-                        : { background: 'rgba(255,255,255,0.06)', color: '#A0A0A0', border: '1px solid rgba(255,255,255,0.1)' }}
-                    >
-                      Colaborador
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setForm(f => ({ ...f, targetAdmin: !f.targetAdmin }))}
-                      className="px-4 py-1.5 rounded-full text-sm font-semibold transition-all"
-                      style={form.targetAdmin
-                        ? { background: '#FF6600', color: '#fff' }
-                        : { background: 'rgba(255,255,255,0.06)', color: '#A0A0A0', border: '1px solid rgba(255,255,255,0.1)' }}
-                    >
-                      Admin
-                    </button>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { key: 'gerente-credenciado', label: 'Gerente Credenciado' },
+                      { key: 'adm-credenciado', label: 'Adm Credenciado' },
+                      { key: 'auditor-credenciado', label: 'Auditor Credenciado' },
+                      { key: 'influencer', label: 'Influencer' },
+                      { key: 'promotor', label: 'Promotor' },
+                      { key: 'frente-de-caixa', label: 'Frente de Caixa' },
+                      { key: 'buyhelp', label: 'Buyhelp' },
+                    ].map(({ key, label }) => {
+                      const active = form.targetRoles.includes(key)
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => setForm(f => ({
+                            ...f,
+                            targetRoles: active
+                              ? f.targetRoles.filter(r => r !== key)
+                              : [...f.targetRoles, key]
+                          }))}
+                          className="px-4 py-1.5 rounded-full text-sm font-semibold transition-all"
+                          style={active
+                            ? { background: '#FF6600', color: '#fff' }
+                            : { background: 'rgba(255,255,255,0.06)', color: '#A0A0A0', border: '1px solid rgba(255,255,255,0.1)' }}
+                        >
+                          {label}
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
               </div>
@@ -866,6 +935,53 @@ export default function CreateTrail() {
 
       {showVideoModal && (
         <VideoModal onClose={() => { setShowVideoModal(false); setVideoModalSection(null) }} onAdd={handleAddVideo} />
+      )}
+
+      {/* ── Modal Trilha ── */}
+      {categoryModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
+          onClick={() => setCategoryModal(null)}
+        >
+          <div
+            className="rounded-2xl p-6 w-80 space-y-4"
+            style={{ background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <h3 className="text-base font-bold text-white">
+              {categoryModal.mode === 'add' ? 'Nova Trilha' : 'Editar Trilha'}
+            </h3>
+            <input
+              autoFocus
+              value={categoryInput}
+              onChange={e => setCategoryInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') confirmCategoryModal(); if (e.key === 'Escape') setCategoryModal(null) }}
+              placeholder="Nome da trilha..."
+              className="w-full px-3 py-2.5 rounded-lg text-sm text-white outline-none"
+              style={{ background: '#0A0A0A', border: '1px solid rgba(255,102,0,0.4)' }}
+            />
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setCategoryModal(null)}
+                className="flex-1 py-2.5 rounded-lg text-sm font-medium"
+                style={{ background: 'rgba(255,255,255,0.06)', color: '#A0A0A0' }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={!categoryInput.trim()}
+                onClick={confirmCategoryModal}
+                className="flex-1 py-2.5 rounded-lg text-sm font-bold disabled:opacity-40"
+                style={{ background: '#FF6600', color: '#fff' }}
+              >
+                {categoryModal.mode === 'add' ? 'Adicionar' : 'Salvar'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </AppLayout>
   )

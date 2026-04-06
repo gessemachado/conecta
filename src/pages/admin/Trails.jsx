@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Trash2, Video, Search, Loader2, Filter, X } from 'lucide-react'
+import { Plus, Trash2, Video, Search, Loader2, Filter, X, Star } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { AppLayout } from '../../components/Layout/AppLayout'
 import { AdminSectionHeader } from '../../components/Layout/AdminSectionHeader'
@@ -16,19 +16,40 @@ export default function AdminTrails() {
 
   useEffect(() => {
     async function load() {
-      const { data, error } = await supabase
-        .from('trails')
-        .select('*, videos(count), is_published')
-        .order('order_index')
+      const [{ data, error }, { data: allVideos }, { data: allRatings }] = await Promise.all([
+        supabase.from('trails').select('*, videos(count), is_published').order('order_index'),
+        supabase.from('videos').select('id, trail_id'),
+        supabase.from('video_ratings').select('video_id, rating'),
+      ])
+
+      // Mapeia video_id → trail_id
+      const videoToTrail = {}
+      for (const v of allVideos ?? []) videoToTrail[v.id] = v.trail_id
+
+      // Agrupa ratings por trail
+      const trailRatings = {}
+      for (const r of allRatings ?? []) {
+        const trailId = videoToTrail[r.video_id]
+        if (!trailId) continue
+        if (!trailRatings[trailId]) trailRatings[trailId] = []
+        trailRatings[trailId].push(r.rating)
+      }
+
       if (!error && data) {
-        setTrails(data.map(t => ({
-          ...t,
-          total_videos: t.videos?.[0]?.count ?? 0,
-          total_evaluations: 0,
-          enrolled: 0,
-          is_published: t.is_published ?? false,
-          is_new: false,
-        })))
+        setTrails(data.map(t => {
+          const ratings = trailRatings[t.id] ?? []
+          const avg = ratings.length ? Math.round(ratings.reduce((s, r) => s + r, 0) / ratings.length * 10) / 10 : null
+          return {
+            ...t,
+            total_videos: t.videos?.[0]?.count ?? 0,
+            total_evaluations: 0,
+            enrolled: 0,
+            is_published: t.is_published ?? false,
+            is_new: false,
+            avg_rating: avg,
+            rating_count: ratings.length,
+          }
+        }))
       }
       setLoading(false)
     }
@@ -169,6 +190,16 @@ export default function AdminTrails() {
                     </span>
                   )}
                 </div>
+
+                {/* Ordem de exibição */}
+                {trail.order_index != null && (
+                  <div
+                    className="absolute top-3 right-3 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold"
+                    style={{ background: 'rgba(0,0,0,0.7)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)' }}
+                  >
+                    {trail.order_index}
+                  </div>
+                )}
               </div>
 
               {/* Card body */}
@@ -182,6 +213,20 @@ export default function AdminTrails() {
                     <Video size={11} />
                     {trail.total_videos} vídeos
                   </span>
+                  {trail.avg_rating !== null ? (
+                    <span className="flex items-center gap-1" style={{ color: '#FFB020' }}>
+                      {[1,2,3,4,5].map(s => (
+                        <Star key={s} size={11} fill={s <= Math.round(trail.avg_rating) ? '#FFB020' : 'none'} style={{ color: '#FFB020' }} />
+                      ))}
+                      <span className="ml-0.5 font-semibold text-white">{trail.avg_rating}</span>
+                      <span style={{ color: '#5A5A5A' }}>({trail.rating_count})</span>
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1" style={{ color: '#3A3A3A' }}>
+                      {[1,2,3,4,5].map(s => <Star key={s} size={11} fill="none" style={{ color: '#3A3A3A' }} />)}
+                      <span className="ml-0.5">sem avaliações</span>
+                    </span>
+                  )}
                 </div>
 
                 {/* Status */}

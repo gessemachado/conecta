@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   ChevronLeft, ChevronDown, ChevronRight, Check, Play, Pause, Volume2, Maximize,
-  Settings, Lock, CheckCircle, ThumbsUp, Award, Loader2,
+  Settings, Lock, CheckCircle, ThumbsUp, Award, Loader2, Star,
 } from 'lucide-react'
 import { AppLayout } from '../components/Layout/AppLayout'
 import { useAuth } from '../contexts/AuthContext'
@@ -62,6 +62,12 @@ export default function VideoPlayer() {
   const [comments, setComments] = useState([])
   const [playing, setPlaying] = useState(false)
   const [likedMap, setLikedMap] = useState({})
+  const [showRating, setShowRating] = useState(false)
+  const [ratingHover, setRatingHover] = useState(0)
+  const [ratingValue, setRatingValue] = useState(0)
+  const [avgRating, setAvgRating] = useState(null)
+  const [ratingCount, setRatingCount] = useState(0)
+  const [userRating, setUserRating] = useState(0)
 
   useEffect(() => {
     setCompleted(false)
@@ -106,17 +112,24 @@ export default function VideoPlayer() {
         if (vids?.length) setSections([{ id: 'legacy', title: null, videos: vids }])
       }
 
-      // Check completed videos
+      // Check completed videos + ratings
       if (user?.id) {
-        const { data: prog } = await supabase
-          .from('video_progress')
-          .select('video_id')
-          .eq('user_id', Number(user.id))
+        const [{ data: prog }, { data: ratingsData }, { data: myRating }] = await Promise.all([
+          supabase.from('video_progress').select('video_id').eq('user_id', Number(user.id)),
+          supabase.from('video_ratings').select('rating').eq('video_id', Number(id)),
+          supabase.from('video_ratings').select('rating').eq('video_id', Number(id)).eq('user_id', Number(user.id)).maybeSingle(),
+        ])
         if (prog) {
           const ids = new Set(prog.map(p => p.video_id))
           setCompletedIds(ids)
           if (ids.has(Number(id))) setCompleted(true)
         }
+        if (ratingsData?.length) {
+          const avg = ratingsData.reduce((s, r) => s + r.rating, 0) / ratingsData.length
+          setAvgRating(Math.round(avg * 10) / 10)
+          setRatingCount(ratingsData.length)
+        }
+        if (myRating) setUserRating(myRating.rating)
       }
       setLoading(false)
     }
@@ -265,6 +278,15 @@ export default function VideoPlayer() {
                       OBRIGATÓRIO
                     </span>
                   )}
+                  {avgRating !== null && (
+                    <span className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold" style={{ background: 'rgba(255,255,255,0.06)', color: '#FFB020' }}>
+                      {[1,2,3,4,5].map(s => (
+                        <Star key={s} size={11} fill={s <= Math.round(avgRating) ? '#FFB020' : 'none'} style={{ color: '#FFB020' }} />
+                      ))}
+                      <span className="ml-1 text-white">{avgRating}</span>
+                      <span style={{ color: '#5A5A5A' }}>({ratingCount})</span>
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -283,6 +305,8 @@ export default function VideoPlayer() {
                         { onConflict: 'user_id,video_id' }
                       )
                     }
+                    setRatingValue(0)
+                    setShowRating(true)
                   }}
                   className="flex items-center gap-2 px-4 py-2 rounded-btn text-sm font-semibold flex-shrink-0 transition-all"
                   style={{ background: '#FF6600', color: '#fff' }}
@@ -467,6 +491,67 @@ export default function VideoPlayer() {
           </div>
         </div>
       </div>
+      {/* ── Modal de avaliação ── */}
+      {showRating && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)' }}
+          onClick={() => setShowRating(false)}
+        >
+          <div
+            className="rounded-2xl p-8 flex flex-col items-center gap-5 w-80"
+            style={{ background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="text-center space-y-1">
+              <h3 className="text-lg font-bold text-white">Como foi esse vídeo?</h3>
+              <p className="text-sm" style={{ color: '#A0A0A0' }}>Sua avaliação nos ajuda a melhorar</p>
+            </div>
+
+            <div className="flex gap-2">
+              {[1,2,3,4,5].map(s => (
+                <button
+                  key={s}
+                  onMouseEnter={() => setRatingHover(s)}
+                  onMouseLeave={() => setRatingHover(0)}
+                  onClick={() => setRatingValue(s)}
+                >
+                  <Star
+                    size={36}
+                    fill={(ratingHover || ratingValue) >= s ? '#FF6600' : 'none'}
+                    style={{ color: '#FF6600', transition: 'fill 0.1s' }}
+                  />
+                </button>
+              ))}
+            </div>
+
+            <button
+              disabled={ratingValue === 0}
+              onClick={async () => {
+                if (user?.id && ratingValue > 0) {
+                  await supabase.from('video_ratings').upsert(
+                    { user_id: Number(user.id), video_id: Number(id), rating: ratingValue },
+                    { onConflict: 'user_id,video_id' }
+                  )
+                  // Atualiza média local
+                  const { data: ratingsData } = await supabase.from('video_ratings').select('rating').eq('video_id', Number(id))
+                  if (ratingsData?.length) {
+                    const avg = ratingsData.reduce((s, r) => s + r.rating, 0) / ratingsData.length
+                    setAvgRating(Math.round(avg * 10) / 10)
+                    setRatingCount(ratingsData.length)
+                  }
+                  setUserRating(ratingValue)
+                }
+                setShowRating(false)
+              }}
+              className="w-full py-3 rounded-xl text-sm font-bold transition-all disabled:opacity-40"
+              style={{ background: '#FF6600', color: '#fff' }}
+            >
+              Confirmar Avaliação
+            </button>
+          </div>
+        </div>
+      )}
     </AppLayout>
   )
 }

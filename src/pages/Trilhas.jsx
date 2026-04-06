@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, Award, Loader2, ChevronDown, Clock, Star } from 'lucide-react'
+import { Search, Award, Loader2, ChevronDown, Clock, Star, Lock } from 'lucide-react'
 import { AppLayout } from '../components/Layout/AppLayout'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -47,12 +47,21 @@ export default function Trilhas() {
         if (trailId) progressMap[trailId] = (progressMap[trailId] ?? 0) + 1
       }
 
-      setTrails((trailsData ?? []).map(t => {
+      const enriched = (trailsData ?? []).map(t => {
         const total = trailVideoCount[t.id] ?? 0
         const completed = progressMap[t.id] ?? 0
         const pct = total > 0 ? Math.round((completed / total) * 100) : 0
         return { ...t, total_videos: total, completed_videos: completed, progress: pct, duration_min: trailDuration[t.id] ?? 0 }
-      }))
+      })
+
+      // Desbloqueia sequencialmente: curso N só libera se o N-1 estiver 100% concluído
+      const ordered = [...enriched].sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0))
+      const withLock = ordered.map((t, i) => {
+        if (t.order_index == null) return { ...t, locked: false }
+        const locked = i > 0 && ordered[i - 1].order_index != null && ordered[i - 1].progress < 100
+        return { ...t, locked }
+      })
+      setTrails(withLock)
       setLoading(false)
     }
     load()
@@ -73,9 +82,10 @@ export default function Trilhas() {
 
   const visible = filtered.slice(0, visibleCount)
 
-  async function handleTrailClick(trailId) {
+  async function handleTrailClick(trail) {
+    if (trail.locked) return
     const { data } = await supabase
-      .from('videos').select('id').eq('trail_id', trailId).order('order_index').limit(1).single()
+      .from('videos').select('id').eq('trail_id', trail.id).order('order_index').limit(1).single()
     if (data) navigate(`/video/${data.id}`)
   }
 
@@ -164,10 +174,10 @@ export default function Trilhas() {
               {visible.map(trail => (
                 <div
                   key={trail.id}
-                  className="group relative rounded-lg overflow-hidden cursor-pointer flex flex-col transition-all duration-300 hover:-translate-y-1"
+                  className={`group relative rounded-lg overflow-hidden flex flex-col transition-all duration-300 ${trail.locked ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:-translate-y-1'}`}
                   style={{ background: '#1a1919', border: '1px solid rgba(72,72,72,0.2)' }}
-                  onClick={() => handleTrailClick(trail.id)}
-                  onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(255,102,0,0.5)'}
+                  onClick={() => handleTrailClick(trail)}
+                  onMouseEnter={e => { if (!trail.locked) e.currentTarget.style.borderColor = 'rgba(255,102,0,0.5)' }}
                   onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(72,72,72,0.2)'}
                 >
                   {/* Thumbnail */}
@@ -181,23 +191,34 @@ export default function Trilhas() {
                     ) : (
                       <div className="w-full h-full" style={{ background: 'linear-gradient(135deg, #1a1a1a, #222)' }} />
                     )}
+                    {/* Overlay de bloqueio */}
+                    {trail.locked && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2" style={{ background: 'rgba(0,0,0,0.6)' }}>
+                        <Lock size={28} style={{ color: '#A0A0A0' }} />
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-center px-2" style={{ color: '#A0A0A0' }}>
+                          Conclua o curso anterior
+                        </span>
+                      </div>
+                    )}
                     {/* Badges */}
-                    <div className="absolute top-2 left-2 flex gap-1.5 flex-wrap">
-                      <span
-                        className="px-2 py-0.5 rounded text-[10px] font-bold text-white uppercase tracking-wider"
-                        style={{ background: '#22C55E' }}
-                      >
-                        Iniciante
-                      </span>
-                      {trail.category && (
+                    {!trail.locked && (
+                      <div className="absolute top-2 left-2 flex gap-1.5 flex-wrap">
                         <span
                           className="px-2 py-0.5 rounded text-[10px] font-bold text-white uppercase tracking-wider"
-                          style={{ background: 'rgba(255,102,0,0.85)', backdropFilter: 'blur(4px)' }}
+                          style={{ background: '#22C55E' }}
                         >
-                          {trail.category}
+                          Iniciante
                         </span>
-                      )}
-                    </div>
+                        {trail.category && (
+                          <span
+                            className="px-2 py-0.5 rounded text-[10px] font-bold text-white uppercase tracking-wider"
+                            style={{ background: 'rgba(255,102,0,0.85)', backdropFilter: 'blur(4px)' }}
+                          >
+                            {trail.category}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Body */}

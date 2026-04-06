@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, Loader2, Clock, CheckCircle2, Bookmark, TrendingUp, Award, Star } from 'lucide-react'
+import { ArrowRight, Loader2, Clock, CheckCircle2, Bookmark, TrendingUp, Award, Star, Lock } from 'lucide-react'
 import { AppLayout } from '../components/Layout/AppLayout'
 import { OnboardingSurvey } from '../components/OnboardingSurvey'
 import { useAuth } from '../contexts/AuthContext'
@@ -60,16 +60,24 @@ export default function Home() {
         return { ...t, total_videos: total, completed_videos: completed, progress: pct, duration_min: trailDuration[t.id] ?? 0 }
       })
 
-      const completedTrails = enriched.filter(t => t.progress === 100)
-      const inProgress = enriched.filter(t => t.progress > 0 && t.progress < 100)
-      const notStarted = enriched.filter(t => t.progress === 0)
+      // Desbloqueia sequencialmente: curso N só libera se o N-1 estiver 100% concluído
+      const ordered = [...enriched].sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0))
+      const withLock = ordered.map((t, i) => {
+        if (t.order_index == null) return { ...t, locked: false }
+        const locked = i > 0 && ordered[i - 1].order_index != null && ordered[i - 1].progress < 100
+        return { ...t, locked }
+      })
+
+      const completedTrails = withLock.filter(t => t.progress === 100)
+      const inProgress = withLock.filter(t => !t.locked && t.progress > 0 && t.progress < 100)
+      const notStarted = withLock.filter(t => !t.locked && t.progress === 0)
 
       let currentT = null
       if (latestVideoId) {
         const lastTrailId = videoToTrail[latestVideoId]
-        currentT = enriched.find(t => t.id === lastTrailId)
+        currentT = withLock.find(t => t.id === lastTrailId && !t.locked)
       }
-      if (!currentT) currentT = inProgress[0] ?? notStarted[0] ?? enriched[0]
+      if (!currentT) currentT = inProgress[0] ?? notStarted[0] ?? withLock[0]
 
       // Weekly chart: last 7 days (Mon→Sun order)
       const DAYS = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB', 'DOM']
@@ -94,10 +102,11 @@ export default function Home() {
       setStats({
         totalMinutes,
         completedTrails: completedTrails.length,
-        remainingTrails: enriched.length - completedTrails.length,
+        remainingTrails: withLock.length - completedTrails.length,
       })
-      // Recommended: in-progress first, then not started, then completed
-      setRecommended([...inProgress, ...notStarted, ...completedTrails].slice(0, 4))
+      // Recommended: desbloqueados em progresso, não iniciados, concluídos e por último bloqueados
+      const locked = withLock.filter(t => t.locked)
+      setRecommended([...inProgress, ...notStarted, ...completedTrails, ...locked].slice(0, 4))
       setWeeklyData(last7.map((d, i) => ({
         day: DAYS[i],
         count: weekCounts[i],
@@ -111,8 +120,9 @@ export default function Home() {
     load()
   }, [user?.id])
 
-  async function handleContinue(trailId) {
-    const { data } = await supabase.from('videos').select('id').eq('trail_id', trailId).order('order_index').limit(1).single()
+  async function handleContinue(trail) {
+    if (trail.locked) return
+    const { data } = await supabase.from('videos').select('id').eq('trail_id', trail.id).order('order_index').limit(1).single()
     if (data) navigate(`/video/${data.id}`)
   }
 
@@ -197,7 +207,7 @@ export default function Home() {
                   </div>
 
                   <button
-                    onClick={() => handleContinue(currentTrail.id)}
+                    onClick={() => handleContinue(currentTrail)}
                     className="w-full flex items-center justify-center gap-2 py-4 rounded-lg font-bold text-sm text-white transition-all active:scale-95"
                     style={{ background: '#FF6600' }}
                     onMouseEnter={e => e.currentTarget.style.background = '#E55C00'}
@@ -291,13 +301,13 @@ export default function Home() {
                 {recommended.map((trail) => (
                   <div
                     key={trail.id}
-                    className="group relative rounded-lg overflow-hidden cursor-pointer flex flex-col transition-all duration-300 hover:-translate-y-1"
+                    className={`group relative rounded-lg overflow-hidden flex flex-col transition-all duration-300 ${trail.locked ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:-translate-y-1'}`}
                     style={{
                       background: '#1a1919',
                       border: '1px solid rgba(72,72,72,0.2)',
                     }}
-                    onClick={() => handleContinue(trail.id)}
-                    onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(255,102,0,0.5)'}
+                    onClick={() => handleContinue(trail)}
+                    onMouseEnter={e => { if (!trail.locked) e.currentTarget.style.borderColor = 'rgba(255,102,0,0.5)' }}
                     onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(72,72,72,0.2)'}
                   >
                     {/* Thumbnail */}
@@ -311,23 +321,34 @@ export default function Home() {
                       ) : (
                         <div className="w-full h-full" style={{ background: 'linear-gradient(135deg, #1a1a1a, #222)' }} />
                       )}
+                      {/* Overlay de bloqueio */}
+                      {trail.locked && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2" style={{ background: 'rgba(0,0,0,0.6)' }}>
+                          <Lock size={28} style={{ color: '#A0A0A0' }} />
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-center px-2" style={{ color: '#A0A0A0' }}>
+                            Conclua o curso anterior
+                          </span>
+                        </div>
+                      )}
                       {/* Badges */}
-                      <div className="absolute top-2 left-2 flex gap-1.5 flex-wrap">
-                        <span
-                          className="px-2 py-0.5 rounded text-[10px] font-bold text-white uppercase tracking-wider"
-                          style={{ background: '#22C55E' }}
-                        >
-                          Iniciante
-                        </span>
-                        {trail.category && (
+                      {!trail.locked && (
+                        <div className="absolute top-2 left-2 flex gap-1.5 flex-wrap">
                           <span
                             className="px-2 py-0.5 rounded text-[10px] font-bold text-white uppercase tracking-wider"
-                            style={{ background: 'rgba(255,102,0,0.85)', backdropFilter: 'blur(4px)' }}
+                            style={{ background: '#22C55E' }}
                           >
-                            {trail.category}
+                            Iniciante
                           </span>
-                        )}
-                      </div>
+                          {trail.category && (
+                            <span
+                              className="px-2 py-0.5 rounded text-[10px] font-bold text-white uppercase tracking-wider"
+                              style={{ background: 'rgba(255,102,0,0.85)', backdropFilter: 'blur(4px)' }}
+                            >
+                              {trail.category}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* Body */}
