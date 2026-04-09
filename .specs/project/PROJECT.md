@@ -1,50 +1,42 @@
 # BuyHelp Conecta
 
-**Vision:** Plataforma de treinamento corporativo para redes de varejo que permite criar trilhas de aprendizado com vídeos, avaliações e certificados, com rastreamento de progresso por colaborador e loja.
-**For:** Administradores de RH/treinamento e colaboradores de lojas de varejo
-**Solves:** Centralizar e rastrear o treinamento de colaboradores em múltiplas lojas, eliminando processos manuais e garantindo certificação formal.
+**Visão:** Plataforma de treinamento corporativo para redes de varejo que centraliza cursos organizados em trilhas de aprendizado, rastreia o progresso individual dos colaboradores e emite certificados de conclusão.
 
-## Goals
+**Para:** Colaboradores de lojas e gestores/RH de redes de varejo.
 
-- Colaboradores concluem trilhas e recebem certificados verificáveis
-- Admins visualizam progresso por loja e colaborador em tempo real
-- NPS e feedback coletados após cada trilha concluída
+**Resolve:** A dispersão e falta de rastreamento do treinamento em redes com múltiplas lojas — os colaboradores não têm um caminho claro de aprendizado, e os gestores não têm visibilidade sobre quem aprendeu o quê.
 
-## Tech Stack
+---
 
-**Core:**
-- Framework UI: React 19.2.4 + Vite 8.0.1
-- Language: JSX / TypeScript
-- API: Express 4.19.2 (Vercel Functions)
-- Database: Supabase PostgreSQL + Storage
+## Personas
 
-**Key dependencies:** React Router DOM 7, Tailwind CSS 3, Lucide React, Zod, Supabase JS 2, JWT, bcryptjs
+### Colaborador
+Funcionário de loja que acessa a plataforma para consumir cursos organizados em trilhas. Quer saber exatamente onde parou, o que falta fazer e receber reconhecimento (certificado) ao concluir.
 
-## Scope
+### Administrador
+Gestor de RH ou treinamento que cria e organiza o conteúdo, gerencia usuários e lojas, e acompanha o desempenho da rede por dashboards.
 
-**v1 includes:**
-- Autenticação JWT (admin + colaborador)
-- Trilhas de aprendizado com vídeos ordenados
-- Player de vídeo com marcação de progresso e comentários
-- Avaliações de múltipla escolha com nota e aprovação
-- Emissão de certificados (código único BH-YYYY-UUID-CERT)
-- Pesquisa de satisfação NPS (3 dimensões, 1x por usuário)
-- Dashboard admin: KPIs + ranking de lojas
-- CRUD de usuários, lojas, trilhas, vídeos, avaliações
-- Upload de imagens (≤10 MB) e vídeos (≤2 GB) via Supabase Storage
-- Deploy frontend (Vercel static) + API (Vercel Functions)
+---
 
-**Explicitly out of scope:**
-- Refresh tokens / sessões longas
-- Notificações in-app
-- Exportação de relatórios PDF/Excel
-- SCORM / integração LMS
-- PWA offline
-- Multi-tenant por franquia
-- Testes automatizados
+## Objetivos do Produto
 
-## Constraints
+1. **Engajamento:** Colaboradores concluem cursos completos e retornam à plataforma regularmente
+2. **Rastreamento:** Gestores sabem, em tempo real, o progresso de cada colaborador e loja
+3. **Certificação:** Colaboradores recebem reconhecimento formal ao aprovar avaliações
+4. **Feedback:** A plataforma coleta NPS e satisfação para melhoria contínua do treinamento
 
-- Technical: Vercel Functions stateless — sem filesystem persistente; Multer em memória
-- Technical: CommonJS no backend para compatibilidade Vercel
-- Technical: JWT em localStorage (sem SSR)
+---
+
+## Escopo v1
+
+**Inclui:**
+- Jornada completa do colaborador: curso → vídeo → avaliação → certificado
+- Desbloqueio sequencial de cursos dentro de trilhas (ordem de aprendizado garantida)
+- Pesquisa de satisfação (NPS) ao entrar pela primeira vez
+- Painel admin com KPIs, gestão de usuários, trilhas, cursos e vídeos
+
+**Fora do escopo:**
+- Recuperação de senha
+- Notificações por e-mail ou push
+- Exportação de relatórios
+- Acesso offline
