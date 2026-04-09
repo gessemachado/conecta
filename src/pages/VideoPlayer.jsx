@@ -2,11 +2,21 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   ChevronLeft, ChevronDown, ChevronRight, Check, Play, Pause, Volume2, Maximize,
-  Settings, Lock, CheckCircle, ThumbsUp, Award, Loader2, Star,
+  Settings, Lock, CheckCircle, ThumbsUp, Award, Loader2, Star, Download, FolderOpen,
 } from 'lucide-react'
 import { AppLayout } from '../components/Layout/AppLayout'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
+
+const DOC_TYPES = {
+  pdf:  { label: 'PDF',   color: '#EF4444' },
+  doc:  { label: 'Word',  color: '#3B82F6' },
+  docx: { label: 'Word',  color: '#3B82F6' },
+  xls:  { label: 'Excel', color: '#22C55E' },
+  xlsx: { label: 'Excel', color: '#22C55E' },
+  ppt:  { label: 'PPT',   color: '#F59E0B' },
+  pptx: { label: 'PPT',   color: '#F59E0B' },
+}
 
 const LEVEL_STYLE = {
   INICIANTE:       { bg: '#22C55E22', color: '#22C55E' },
@@ -68,6 +78,7 @@ export default function VideoPlayer() {
   const [avgRating, setAvgRating] = useState(null)
   const [ratingCount, setRatingCount] = useState(0)
   const [userRating, setUserRating] = useState(0)
+  const [docs, setDocs] = useState([])
 
   useEffect(() => {
     setCompleted(false)
@@ -81,6 +92,14 @@ export default function VideoPlayer() {
         .single()
       if (!vid) { setLoading(false); return }
       setVideo(vid)
+
+      // Load documents for this video
+      const { data: videoDocs } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('video_id', Number(id))
+        .order('order_index')
+      setDocs(videoDocs || [])
 
       // Fetch trail
       const { data: tr } = await supabase
@@ -322,6 +341,56 @@ export default function VideoPlayer() {
             {/* Description */}
             {video.description && (
               <p className="text-text-secondary text-sm leading-relaxed">{video.description}</p>
+            )}
+
+            {/* Resources */}
+            {docs.length > 0 && (
+              <div
+                className="rounded-xl p-4 space-y-3"
+                style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.08)' }}
+              >
+                <div className="flex items-center gap-2">
+                  <FolderOpen size={15} style={{ color: '#A78BFA' }} />
+                  <span className="text-sm font-semibold text-white">Material de Apoio</span>
+                  <span
+                    className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                    style={{ background: 'rgba(139,92,246,0.15)', color: '#A78BFA' }}
+                  >
+                    {docs.length}
+                  </span>
+                </div>
+                <div className="space-y-1.5">
+                  {docs.map(doc => {
+                    const ext = doc.file_type || ''
+                    const typeInfo = DOC_TYPES[ext] || { label: ext.toUpperCase() || 'ARQ', color: '#A0A0A0' }
+                    return (
+                      <a
+                        key={doc.id}
+                        href={doc.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3 p-3 rounded-lg group transition-colors"
+                        style={{ background: '#0D0D0D', border: '1px solid rgba(255,255,255,0.05)' }}
+                        onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(167,139,250,0.3)'}
+                        onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)'}
+                      >
+                        <span
+                          className="text-[10px] font-bold px-1.5 py-1 rounded flex-shrink-0"
+                          style={{ background: `${typeInfo.color}22`, color: typeInfo.color, minWidth: 32, textAlign: 'center' }}
+                        >
+                          {typeInfo.label}
+                        </span>
+                        <span className="text-sm text-white flex-1 truncate">{doc.title}</span>
+                        <Download
+                          size={14}
+                          className="flex-shrink-0 opacity-40 group-hover:opacity-100 transition-opacity"
+                          style={{ color: '#A78BFA' }}
+                        />
+                      </a>
+                    )
+                  })}
+                </div>
+              </div>
             )}
 
             {/* Divider */}

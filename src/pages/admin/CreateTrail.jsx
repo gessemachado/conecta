@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
-import { Plus, Trash2, GripVertical, ImageIcon, X, ChevronRight, ChevronDown, Video, Clock, FileVideo, ArrowRight, Loader2, Pencil } from 'lucide-react'
+import { Plus, Trash2, GripVertical, ImageIcon, X, ChevronRight, ChevronDown, Video, Clock, FileVideo, ArrowRight, Loader2, Pencil, FileText, Download } from 'lucide-react'
 import { AppLayout } from '../../components/Layout/AppLayout'
 import { supabase } from '../../lib/supabase'
 
@@ -295,6 +295,182 @@ function VideoModal({ onClose, onAdd }) {
   )
 }
 
+const DOC_TYPES = {
+  pdf:  { label: 'PDF',   color: '#EF4444' },
+  doc:  { label: 'Word',  color: '#3B82F6' },
+  docx: { label: 'Word',  color: '#3B82F6' },
+  xls:  { label: 'Excel', color: '#22C55E' },
+  xlsx: { label: 'Excel', color: '#22C55E' },
+  ppt:  { label: 'PPT',   color: '#F59E0B' },
+  pptx: { label: 'PPT',   color: '#F59E0B' },
+}
+
+function fmtBytes(bytes) {
+  if (!bytes) return ''
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function DocumentModal({ onClose, onAdd }) {
+  const fileInputRef = useRef(null)
+  const [dragOver, setDragOver] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [title, setTitle] = useState('')
+  const [fileInfo, setFileInfo] = useState(null) // { name, size, ext, url }
+
+  async function handleFile(file) {
+    if (!file) return
+    const ext = file.name.split('.').pop().toLowerCase()
+    setTitle(prev => prev || file.name.replace(/\.[^.]+$/, ''))
+    setUploading(true)
+    const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+    const { error } = await supabase.storage.from('documents').upload(path, file, { upsert: true })
+    if (!error) {
+      const { data: urlData } = supabase.storage.from('documents').getPublicUrl(path)
+      setFileInfo({ name: file.name, size: file.size, ext, url: urlData.publicUrl })
+    }
+    setUploading(false)
+  }
+
+  function handleDrop(e) {
+    e.preventDefault()
+    setDragOver(false)
+    handleFile(e.dataTransfer.files[0])
+  }
+
+  function handleSubmit(e) {
+    e.preventDefault()
+    if (!title || !fileInfo) return
+    onAdd({
+      id: `d${Date.now()}`,
+      title,
+      file_url: fileInfo.url,
+      file_type: fileInfo.ext,
+      file_size: fileInfo.size,
+      order_index: 0,
+    })
+  }
+
+  const inputStyle = { background: '#0D0D0D', border: '1px solid rgba(255,255,255,0.1)' }
+  const typeInfo = fileInfo ? (DOC_TYPES[fileInfo.ext] || { label: fileInfo.ext.toUpperCase(), color: '#A0A0A0' }) : null
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-6 overflow-y-auto">
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <div
+        className="relative w-full max-w-lg rounded-xl shadow-2xl my-auto"
+        style={{ background: '#1C1C1C', border: '1px solid rgba(255,255,255,0.1)' }}
+      >
+        <div className="px-6 pt-5 pb-4">
+          <div className="flex items-start justify-between">
+            <div>
+              <h3 className="text-base font-semibold text-white">Adicionar Material de Apoio</h3>
+              <p className="text-xs mt-0.5" style={{ color: '#5A5A5A' }}>PDF, Word, Excel, PowerPoint • até 50 MB</p>
+            </div>
+            <button onClick={onClose} className="text-text-secondary hover:text-white transition-colors mt-0.5">
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          <div className="px-6 pb-6 space-y-4">
+            {fileInfo ? (
+              <div
+                className="flex items-center gap-3 p-4 rounded-lg"
+                style={{ background: '#0D0D0D', border: '1px solid rgba(255,255,255,0.08)' }}
+              >
+                <div
+                  className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 text-xs font-bold"
+                  style={{ background: `${typeInfo.color}22`, color: typeInfo.color }}
+                >
+                  {typeInfo.label}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-white truncate">{fileInfo.name}</p>
+                  <p className="text-xs mt-0.5" style={{ color: '#5A5A5A' }}>{fmtBytes(fileInfo.size)}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setFileInfo(null); setTitle('') }}
+                  className="w-6 h-6 rounded-full flex items-center justify-center text-white flex-shrink-0"
+                  style={{ background: 'rgba(0,0,0,0.5)' }}
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            ) : (
+              <div
+                className="rounded-lg flex flex-col items-center justify-center gap-2 py-10 cursor-pointer transition-colors"
+                style={{
+                  border: `1px dashed ${dragOver ? '#FF6600' : 'rgba(255,255,255,0.12)'}`,
+                  background: dragOver ? 'rgba(255,102,0,0.04)' : '#0D0D0D',
+                }}
+                onDragOver={e => { e.preventDefault(); setDragOver(true) }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {uploading ? (
+                  <Loader2 size={28} className="animate-spin" style={{ color: '#FF6600' }} />
+                ) : (
+                  <>
+                    <FileText size={28} style={{ color: '#3A3A3A' }} />
+                    <p className="text-sm font-medium text-white">Clique ou arraste o arquivo aqui</p>
+                    <p className="text-xs" style={{ color: '#5A5A5A' }}>PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX</p>
+                  </>
+                )}
+              </div>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
+              className="hidden"
+              onChange={e => handleFile(e.target.files[0])}
+            />
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold" style={{ color: '#A0A0A0' }}>Título do material *</label>
+              <input
+                required
+                value={title}
+                onChange={e => setTitle(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-btn text-sm text-white outline-none transition-colors"
+                style={inputStyle}
+                placeholder="Ex: Manual de Operações"
+                onFocus={e => e.target.style.borderColor = '#FF6600'}
+                onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
+              />
+            </div>
+
+            <div className="flex gap-3 pt-1">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 py-2.5 rounded-btn text-sm font-medium transition-colors"
+                style={{ background: 'rgba(255,255,255,0.06)', color: '#A0A0A0', border: '1px solid rgba(255,255,255,0.08)' }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={uploading || !fileInfo}
+                className="flex-1 py-2.5 rounded-btn text-sm font-semibold transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+                style={{ background: '#FF6600', color: '#fff' }}
+              >
+                {uploading && <Loader2 size={14} className="animate-spin" />}
+                {uploading ? 'Enviando...' : 'Salvar Material'}
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 export default function CreateTrail() {
   const navigate = useNavigate()
   const { id } = useParams()
@@ -312,6 +488,10 @@ export default function CreateTrail() {
   const [thumbnailFile, setThumbnailFile] = useState(null)
   const [showVideoModal, setShowVideoModal] = useState(false)
   const [videoModalSection, setVideoModalSection] = useState(null)
+  const [documents, setDocuments] = useState([])
+  const [showDocModal, setShowDocModal] = useState(false)
+  const [videoDocs, setVideoDocs] = useState({}) // { [localVideoId]: [doc,...] }
+  const [docModalVideoId, setDocModalVideoId] = useState(null) // null=course, id=video
   const [saving, setSaving] = useState(false)
   const [loadingEdit, setLoadingEdit] = useState(isEdit)
   const [error, setError] = useState('')
@@ -414,6 +594,19 @@ export default function CreateTrail() {
           }])
         }
       }
+      // Load documents (course-level and video-level)
+      const { data: docs } = await supabase.from('documents').select('*').eq('trail_id', id).order('order_index')
+      if (docs?.length) {
+        setDocuments(docs.filter(d => !d.video_id).map(d => ({ ...d, id: `d${d.id}`, _dbId: d.id })))
+        const vdMap = {}
+        docs.filter(d => d.video_id).forEach(d => {
+          const key = String(d.video_id)
+          if (!vdMap[key]) vdMap[key] = []
+          vdMap[key].push({ ...d, id: `d${d.id}`, _dbId: d.id })
+        })
+        setVideoDocs(vdMap)
+      }
+
       setLoadingEdit(false)
     }
     loadTrail()
@@ -461,6 +654,30 @@ export default function CreateTrail() {
         ? { ...sec, videos: sec.videos.filter(v => v.id !== videoId) }
         : sec
     ))
+  }
+
+  function handleAddDocument(doc) {
+    setDocuments(d => [...d, { ...doc, order_index: d.length + 1 }])
+    setShowDocModal(false)
+  }
+
+  function handleRemoveDocument(docId) {
+    setDocuments(d => d.filter(doc => doc.id !== docId))
+  }
+
+  function handleAddVideoDoc(doc) {
+    setVideoDocs(prev => ({
+      ...prev,
+      [docModalVideoId]: [...(prev[docModalVideoId] || []), { ...doc, order_index: (prev[docModalVideoId]?.length || 0) + 1 }],
+    }))
+    setDocModalVideoId(null)
+  }
+
+  function handleRemoveVideoDoc(videoLocalId, docId) {
+    setVideoDocs(prev => ({
+      ...prev,
+      [videoLocalId]: (prev[videoLocalId] || []).filter(d => d.id !== docId),
+    }))
   }
 
   function handleThumbnail(e) {
@@ -515,7 +732,8 @@ export default function CreateTrail() {
         trailId = trail.id
       }
 
-      // 3. Insert sections + videos
+      // 3. Insert sections + videos (collect video docs to insert later)
+      const pendingVideoDocRows = []
       for (let i = 0; i < sections.length; i++) {
         const sec = sections[i]
         const { data: secRow, error: secErr } = await supabase
@@ -536,9 +754,47 @@ export default function CreateTrail() {
             is_mandatory: v.is_mandatory,
             order_index: j + 1,
           }))
-          const { error: vidErr } = await supabase.from('videos').insert(rows)
+          const { data: savedVids, error: vidErr } = await supabase.from('videos').insert(rows).select('id, order_index')
           if (vidErr) throw new Error(vidErr.message)
+
+          if (savedVids) {
+            for (let j = 0; j < sec.videos.length; j++) {
+              const localVid = sec.videos[j]
+              const dbVidId = savedVids.find(sv => sv.order_index === j + 1)?.id
+              const vDocs = videoDocs[String(localVid.id)] || []
+              if (dbVidId && vDocs.length > 0) {
+                vDocs.forEach((d, k) => {
+                  pendingVideoDocRows.push({
+                    trail_id: trailId,
+                    video_id: dbVidId,
+                    title: d.title,
+                    file_url: d.file_url,
+                    file_type: d.file_type,
+                    file_size: d.file_size,
+                    order_index: k + 1,
+                  })
+                })
+              }
+            }
+          }
         }
+      }
+
+      // 4. Save all documents (course-level + video-level) in one go
+      await supabase.from('documents').delete().eq('trail_id', trailId)
+      const allDocRows = [
+        ...documents.map((d, i) => ({
+          trail_id: trailId,
+          title: d.title,
+          file_url: d.file_url,
+          file_type: d.file_type,
+          file_size: d.file_size,
+          order_index: i + 1,
+        })),
+        ...pendingVideoDocRows,
+      ]
+      if (allDocRows.length > 0) {
+        await supabase.from('documents').insert(allDocRows)
       }
 
       navigate('/admin/trilhas')
@@ -823,6 +1079,20 @@ export default function CreateTrail() {
                                     </div>
                                   </div>
                                   <button
+                                    onClick={() => setDocModalVideoId(String(v.id))}
+                                    className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold transition-colors flex-shrink-0"
+                                    style={
+                                      (videoDocs[String(v.id)]?.length || 0) > 0
+                                        ? { background: 'rgba(139,92,246,0.2)', color: '#A78BFA', border: '1px solid rgba(139,92,246,0.3)' }
+                                        : { background: 'rgba(255,255,255,0.05)', color: '#5A5A5A', border: '1px solid rgba(255,255,255,0.08)' }
+                                    }
+                                  >
+                                    <FileText size={10} />
+                                    {(videoDocs[String(v.id)]?.length || 0) > 0
+                                      ? `${videoDocs[String(v.id)].length} rec.`
+                                      : 'Recursos'}
+                                  </button>
+                                  <button
                                     onClick={() => handleRemoveVideo(sec.localId, v.id)}
                                     className="p-1.5 rounded-btn transition-colors flex-shrink-0"
                                     style={{ color: '#5A5A5A' }}
@@ -867,6 +1137,7 @@ export default function CreateTrail() {
                 )}
               </div>
             </div>
+
           </div>
 
           {/* RIGHT — 1/3 */}
@@ -935,6 +1206,10 @@ export default function CreateTrail() {
 
       {showVideoModal && (
         <VideoModal onClose={() => { setShowVideoModal(false); setVideoModalSection(null) }} onAdd={handleAddVideo} />
+      )}
+
+      {docModalVideoId && (
+        <DocumentModal onClose={() => setDocModalVideoId(null)} onAdd={handleAddVideoDoc} />
       )}
 
       {/* ── Modal Trilha ── */}

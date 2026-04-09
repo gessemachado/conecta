@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Play, Lock, CheckCircle, Clock, BookOpen, Award, ChevronLeft, ChevronDown, ChevronRight, AlertCircle, Loader2 } from 'lucide-react'
+import { Play, Lock, CheckCircle, Clock, BookOpen, Award, ChevronLeft, ChevronDown, ChevronRight, AlertCircle, Loader2, FileText, Download, FolderOpen } from 'lucide-react'
 import { AppLayout } from '../components/Layout/AppLayout'
 import { Card } from '../components/ui/Card'
 import { Badge, LevelBadge } from '../components/ui/Badge'
@@ -9,6 +9,16 @@ import { formatProgress } from '../lib/utils'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 
+const DOC_TYPES = {
+  pdf:  { label: 'PDF',   color: '#EF4444' },
+  doc:  { label: 'Word',  color: '#3B82F6' },
+  docx: { label: 'Word',  color: '#3B82F6' },
+  xls:  { label: 'Excel', color: '#22C55E' },
+  xlsx: { label: 'Excel', color: '#22C55E' },
+  ppt:  { label: 'PPT',   color: '#F59E0B' },
+  pptx: { label: 'PPT',   color: '#F59E0B' },
+}
+
 function fmtMin(seconds) {
   const m = Math.floor(seconds / 60)
   const h = Math.floor(m / 60)
@@ -16,16 +26,21 @@ function fmtMin(seconds) {
   return `${m} min`
 }
 
-function VideoRow({ video, onPlay }) {
+function VideoRow({ video, onPlay, docs = [] }) {
+  const [showDocs, setShowDocs] = useState(false)
+
   return (
     <div
-      onClick={video.locked ? undefined : onPlay}
       className={`flex items-center gap-4 p-4 rounded-lg transition-colors ${
-        video.locked ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer group hover:bg-white/5'
+        video.locked ? 'opacity-50 cursor-not-allowed' : 'group hover:bg-white/5'
       }`}
       style={{ border: '1px solid rgba(255,255,255,0.04)' }}
     >
-      <div className="flex-shrink-0">
+      <div
+        className="flex-shrink-0"
+        onClick={video.locked ? undefined : onPlay}
+        style={{ cursor: video.locked ? 'not-allowed' : 'pointer' }}
+      >
         {video.completed ? (
           <div className="w-8 h-8 rounded-full bg-green-500/10 flex items-center justify-center">
             <CheckCircle size={16} className="text-green-400" />
@@ -40,7 +55,11 @@ function VideoRow({ video, onPlay }) {
           </div>
         )}
       </div>
-      <div className="flex-1 min-w-0">
+      <div
+        className="flex-1 min-w-0"
+        onClick={video.locked ? undefined : onPlay}
+        style={{ cursor: video.locked ? 'not-allowed' : 'pointer' }}
+      >
         <div className="flex items-center gap-2 mb-0.5">
           <span className="text-xs text-text-secondary">Aula {video.order_index}</span>
           {video.is_mandatory && (
@@ -49,7 +68,53 @@ function VideoRow({ video, onPlay }) {
         </div>
         <p className="text-sm font-medium text-white truncate">{video.title}</p>
       </div>
-      <div className="flex items-center gap-3 flex-shrink-0">
+      <div className="flex items-center gap-2 flex-shrink-0">
+        {docs.length > 0 && (
+          <div className="relative">
+            <button
+              onClick={e => { e.stopPropagation(); setShowDocs(v => !v) }}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-colors"
+              style={{ background: 'rgba(139,92,246,0.15)', color: '#A78BFA', border: '1px solid rgba(139,92,246,0.25)' }}
+            >
+              <FolderOpen size={11} />
+              Recursos
+              <ChevronDown size={10} style={{ transform: showDocs ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.15s' }} />
+            </button>
+            {showDocs && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowDocs(false)} />
+                <div
+                  className="absolute right-0 top-full mt-1 w-60 rounded-xl shadow-2xl z-20 overflow-hidden"
+                  style={{ background: '#1C1C1C', border: '1px solid rgba(255,255,255,0.1)' }}
+                >
+                  {docs.map(doc => {
+                    const ext = doc.file_type || ''
+                    const typeInfo = DOC_TYPES[ext] || { label: ext.toUpperCase() || 'ARQ', color: '#A0A0A0' }
+                    return (
+                      <a
+                        key={doc.id}
+                        href={doc.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2.5 px-3 py-2.5 hover:bg-white/5 transition-colors"
+                        onClick={e => e.stopPropagation()}
+                      >
+                        <span
+                          className="text-[9px] font-bold px-1.5 py-0.5 rounded flex-shrink-0"
+                          style={{ background: `${typeInfo.color}22`, color: typeInfo.color }}
+                        >
+                          {typeInfo.label}
+                        </span>
+                        <span className="text-xs text-white truncate flex-1">{doc.title}</span>
+                        <Download size={11} style={{ color: '#5A5A5A' }} className="flex-shrink-0" />
+                      </a>
+                    )
+                  })}
+                </div>
+              </>
+            )}
+          </div>
+        )}
         <LevelBadge level={video.level} />
         <span className="text-xs text-text-secondary hidden sm:block">{fmtMin(video.duration_seconds)}</span>
       </div>
@@ -68,6 +133,8 @@ export default function TrailDetail() {
   const [evaluation, setEvaluation] = useState(null)
   const [evalPassed, setEvalPassed] = useState(false)
   const [collapsedSections, setCollapsedSections] = useState({})
+  const [documents, setDocuments] = useState([])
+  const [videoDocsMap, setVideoDocsMap] = useState({}) // { [videoId]: [doc,...] }
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -131,6 +198,19 @@ export default function TrailDetail() {
             .maybeSingle()
           if (result?.passed) setEvalPassed(true)
         }
+      }
+
+      // Documents
+      const { data: docs } = await supabase.from('documents').select('*').eq('trail_id', id).order('order_index')
+      if (docs?.length) {
+        setDocuments(docs.filter(d => !d.video_id))
+        const vdMap = {}
+        docs.filter(d => d.video_id).forEach(d => {
+          const key = String(d.video_id)
+          if (!vdMap[key]) vdMap[key] = []
+          vdMap[key].push(d)
+        })
+        setVideoDocsMap(vdMap)
       }
 
       setLoading(false)
@@ -233,6 +313,7 @@ export default function TrailDetail() {
                   key={video.id}
                   video={{ ...video, completed: completedIds.has(video.id), locked: false }}
                   onPlay={() => navigate(`/video/${video.id}`)}
+                  docs={videoDocsMap[String(video.id)] || []}
                 />
               ))}
             </div>
@@ -270,6 +351,7 @@ export default function TrailDetail() {
                             key={video.id}
                             video={{ ...video, completed: completedIds.has(video.id), locked: false }}
                             onPlay={() => navigate(`/video/${video.id}`)}
+                            docs={videoDocsMap[String(video.id)] || []}
                           />
                         ))}
                       </div>
@@ -280,6 +362,44 @@ export default function TrailDetail() {
             </div>
           )}
         </div>
+
+        {/* Documents */}
+        {documents.length > 0 && (
+          <div>
+            <h2 className="text-sm font-semibold text-text-secondary uppercase tracking-wider mb-3 flex items-center gap-2">
+              <FileText size={14} />
+              Material de Apoio
+            </h2>
+            <div className="space-y-2">
+              {documents.map(doc => {
+                const ext = doc.file_type || ''
+                const typeInfo = DOC_TYPES[ext] || { label: ext.toUpperCase() || 'ARQ', color: '#A0A0A0' }
+                return (
+                  <a
+                    key={doc.id}
+                    href={doc.file_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    download
+                    className="flex items-center gap-4 p-4 rounded-lg group transition-colors hover:bg-white/5"
+                    style={{ border: '1px solid rgba(255,255,255,0.04)' }}
+                  >
+                    <div
+                      className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 text-[10px] font-bold"
+                      style={{ background: `${typeInfo.color}22`, color: typeInfo.color }}
+                    >
+                      {typeInfo.label}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white truncate">{doc.title}</p>
+                    </div>
+                    <Download size={15} className="flex-shrink-0 opacity-40 group-hover:opacity-100 transition-opacity" style={{ color: '#FF6600' }} />
+                  </a>
+                )
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Evaluation */}
         {evaluation && (
